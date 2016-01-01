@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+    <metadata>
+        <id>$id$</id>
+        <version>$version$</version>
+        <authors>$author$</authors>
+        <projectUrl>https://github.com/dalance/NeovimClient</projectUrl>
+        <licenseUrl>https://raw.githubusercontent.com/dalance/NeovimClient/master/LICENSE</licenseUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>$description$</description>
+        <dependencies>
+            <dependency id="MsgPack.Cli" version="0.6.7" />
+        </dependencies>
+    </metadata>
+</package>
