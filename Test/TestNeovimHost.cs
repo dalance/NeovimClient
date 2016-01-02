@@ -60,8 +60,10 @@ namespace Test {
         [TestMethod]
         public void TestGetFuncInfo() {
             var ret0 = nvim.GetFuncInfo( "vim_command" );
-            Assert.AreEqual( ret0.Name       , "vim_command" );
-            Assert.AreEqual( ret0.Description, "void Action<String>( String name, String str )" );
+            Assert.AreEqual( ret0.Name          , "vim_command" );
+            Assert.AreEqual( ret0.ParamTypeCs[0], typeof( string ) );
+            Assert.AreEqual( ret0.ReturnTypeCs  , typeof( void ) );
+            Assert.AreEqual( ret0.Description   , "void Action<String>( String name, String str )" );
 
             var ret1 = nvim.GetFuncInfo( "vim_replace_termcodes" );
             Assert.AreEqual( ret1.Name       , "vim_replace_termcodes" );

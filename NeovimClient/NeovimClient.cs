@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -46,14 +47,14 @@ namespace NeovimClient {
             Name = name;
             Description = dscr;
             ReturnTypeNeovim = returnType;
-            ReturnTypeCs = NeovimUtil.GetType( returnType );
+            ReturnTypeCs = NeovimUtil.ConvTypeNeovimToCs( returnType );
             IsAsync = isAsync;
             CanFail = canFail;
             Func = func;
 
             foreach ( var p in paramType ) {
                 paramTypeNeovim.Add( p );
-                paramTypeCs.Add( NeovimUtil.GetType( p ) );
+                paramTypeCs.Add( NeovimUtil.ConvTypeNeovimToCs( p ) );
             }
         }
     }
@@ -120,7 +121,7 @@ namespace NeovimClient {
         private void CreateApi() {
             api.Clear();
             var funcs = GetApiInfo().AsList()[1].AsDictionary()["functions"].AsList();
-            var funcsStatic = CreateApiStatic();
+            var funcsStatic = GetApiStatic();
 
             foreach( var f in funcs.Concat( funcsStatic ) ) {
                 var func = f.AsDictionary();
@@ -133,14 +134,14 @@ namespace NeovimClient {
 
                 var param = new List<string>();
 
-                var dscr0 = ( NeovimUtil.GetType( returnType ) == typeof( void ) ) ? "void Action<" : NeovimUtil.GetType( returnType ).Name + " Func<";
+                var dscr0 = ( NeovimUtil.ConvTypeNeovimToCs( returnType ) == typeof( void ) ) ? "void Action<" : NeovimUtil.ConvTypeNeovimToCs( returnType ).Name + " Func<";
                 var dscr1 = "( String name, ";
                 foreach( var p in parameters ) {
                     var pType = p.AsList()[0].AsString();
                     var pName = p.AsList()[1].AsString();
                     param.Add( pType );
-                    dscr0 += NeovimUtil.GetType( pType ).Name + ", ";
-                    dscr1 += NeovimUtil.GetType( pType ).Name + " " + pName + ", ";
+                    dscr0 += NeovimUtil.ConvTypeNeovimToCs( pType ).Name + ", ";
+                    dscr1 += NeovimUtil.ConvTypeNeovimToCs( pType ).Name + " " + pName + ", ";
                 }
                 dscr0 = dscr0.Remove( dscr0.Length - 2 );
                 dscr1 = dscr1.Remove( dscr1.Length - 2 );
@@ -152,7 +153,7 @@ namespace NeovimClient {
             }
         }
 
-        private List<MessagePackObject> CreateApiStatic() {
+        private List<MessagePackObject> GetApiStatic() {
             var ui_attach_dict = new Dictionary<MessagePackObject, MessagePackObject>();
             var ui_attach_param  = new List<MessagePackObject>();
             ui_attach_param.Add( new MessagePackObject( new List<MessagePackObject>() { "Integer", "width" } ) );
@@ -191,96 +192,23 @@ namespace NeovimClient {
         }
 
         private object CreateExpression( string name, string returnType, List<string> param, bool async, bool canFail ) {
-            if ( IsActionType                                        ( param, returnType ) ) { return CreateAction                                        ( name, returnType, param, async, canFail ); }
-            if ( IsActionType<long                                  >( param, returnType ) ) { return CreateAction<long                                  >( name, returnType, param, async, canFail ); }
-            if ( IsActionType<long, long                            >( param, returnType ) ) { return CreateAction<long, long                            >( name, returnType, param, async, canFail ); }
-            if ( IsActionType<long, long, bool                      >( param, returnType ) ) { return CreateAction<long, long, bool                      >( name, returnType, param, async, canFail ); }
-            if ( IsActionType<long, long, string                    >( param, returnType ) ) { return CreateAction<long, long, string                    >( name, returnType, param, async, canFail ); }
-            if ( IsActionType<long, long, string[]                  >( param, returnType ) ) { return CreateAction<long, long, string[]                  >( name, returnType, param, async, canFail ); }
-            if ( IsActionType<long, long, long, bool, bool, string[]>( param, returnType ) ) { return CreateAction<long, long, long, bool, bool, string[]>( name, returnType, param, async, canFail ); }
-            if ( IsActionType<long, long[]                          >( param, returnType ) ) { return CreateAction<long, long[]                          >( name, returnType, param, async, canFail ); }
-            if ( IsActionType<long, string                          >( param, returnType ) ) { return CreateAction<long, string                          >( name, returnType, param, async, canFail ); }
-            if ( IsActionType<long, string, object                  >( param, returnType ) ) { return CreateAction<long, string, object                  >( name, returnType, param, async, canFail ); }
-            if ( IsActionType<string                                >( param, returnType ) ) { return CreateAction<string                                >( name, returnType, param, async, canFail ); }
-            if ( IsActionType<string, string, bool                  >( param, returnType ) ) { return CreateAction<string, string, bool                  >( name, returnType, param, async, canFail ); }
-            if ( IsActionType<string, object                        >( param, returnType ) ) { return CreateAction<string, object                        >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <long                                  >( param, returnType ) ) { return CreateFunc  <long                                  >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <long, bool                            >( param, returnType ) ) { return CreateFunc  <long, bool                            >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <long, long                            >( param, returnType ) ) { return CreateFunc  <long, long                            >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <long, long[]                          >( param, returnType ) ) { return CreateFunc  <long, long[]                          >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <long, long, string                    >( param, returnType ) ) { return CreateFunc  <long, long, string                    >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <long, long, long, bool, bool, string[]>( param, returnType ) ) { return CreateFunc  <long, long, long, bool, bool, string[]>( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <long, string                          >( param, returnType ) ) { return CreateFunc  <long, string                          >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <long, string, long[]                  >( param, returnType ) ) { return CreateFunc  <long, string, long[]                  >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <long, string, object                  >( param, returnType ) ) { return CreateFunc  <long, string, object                  >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <long, string, object, object          >( param, returnType ) ) { return CreateFunc  <long, string, object, object          >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <long[]                                >( param, returnType ) ) { return CreateFunc  <long[]                                >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <string                                >( param, returnType ) ) { return CreateFunc  <string                                >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <string, long                          >( param, returnType ) ) { return CreateFunc  <string, long                          >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <string, string                        >( param, returnType ) ) { return CreateFunc  <string, string                        >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <string, object                        >( param, returnType ) ) { return CreateFunc  <string, object                        >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <string, object, object                >( param, returnType ) ) { return CreateFunc  <string, object, object                >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <string, bool, bool, bool, string      >( param, returnType ) ) { return CreateFunc  <string, bool, bool, bool, string      >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <string, MessagePackObject, object     >( param, returnType ) ) { return CreateFunc  <string, MessagePackObject, object     >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <string[]                              >( param, returnType ) ) { return CreateFunc  <string[]                              >( name, returnType, param, async, canFail ); }
-            if ( IsFuncType  <MessagePackObject                     >( param, returnType ) ) { return CreateFunc  <MessagePackObject                     >( name, returnType, param, async, canFail ); }
-            throw new NotImplementedException();
-        }
+            if( param.Count > 6 ) {
+                throw new NotImplementedException();
+            }
 
-        private bool IsFuncType<T1>( List<string> p, string r ) {
-            return p.Count == 0 && NeovimUtil.GetType( r ) == typeof( T1 );
-        }
-
-        private bool IsFuncType<T1, T2>( List<string> p, string r ) {
-            return p.Count == 1 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( r ) == typeof( T2 );
-        }
-
-        private bool IsFuncType<T1, T2, T3>( List<string> p, string r ) {
-            return p.Count == 2 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( r ) == typeof( T3 );
-        }
-
-        private bool IsFuncType<T1, T2, T3, T4>( List<string> p, string r ) {
-            return p.Count == 3 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( r ) == typeof( T4 );
-        }
-
-        private bool IsFuncType<T1, T2, T3, T4, T5>( List<string> p, string r ) {
-            return p.Count == 4 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( p[3] ) == typeof( T4 ) && NeovimUtil.GetType( r ) == typeof( T5 );
-        }
-
-        private bool IsFuncType<T1, T2, T3, T4, T5, T6>( List<string> p, string r ) {
-            return p.Count == 5 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( p[3] ) == typeof( T4 ) && NeovimUtil.GetType( p[4] ) == typeof( T5 ) && NeovimUtil.GetType( r ) == typeof( T6 );
-        }
-
-        private bool IsFuncType<T1, T2, T3, T4, T5, T6, T7>( List<string> p, string r ) {
-            return p.Count == 6 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( p[3] ) == typeof( T4 ) && NeovimUtil.GetType( p[4] ) == typeof( T5 ) && NeovimUtil.GetType( p[5] ) == typeof( T6 ) && NeovimUtil.GetType( r ) == typeof( T7 );
-        }
-
-        private bool IsActionType( List<string> p, string r ) {
-            return p.Count == 0 && NeovimUtil.GetType( r ) == typeof( void );
-        }
-
-        private bool IsActionType<T1>( List<string> p, string r ) {
-            return p.Count == 1 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( r ) == typeof( void );
-        }
-
-        private bool IsActionType<T1, T2>( List<string> p, string r ) {
-            return p.Count == 2 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( r ) == typeof( void );
-        }
-
-        private bool IsActionType<T1, T2, T3>( List<string> p, string r ) {
-            return p.Count == 3 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( r ) == typeof( void );
-        }
-
-        private bool IsActionType<T1, T2, T3, T4>( List<string> p, string r ) {
-            return p.Count == 4 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( p[3] ) == typeof( T4 ) && NeovimUtil.GetType( r ) == typeof( void );
-        }
-
-        private bool IsActionType<T1, T2, T3, T4, T5>( List<string> p, string r ) {
-            return p.Count == 5 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( p[3] ) == typeof( T4 ) && NeovimUtil.GetType( p[4] ) == typeof( T5 ) && NeovimUtil.GetType( r ) == typeof( void );
-        }
-
-        private bool IsActionType<T1, T2, T3, T4, T5, T6>( List<string> p, string r ) {
-            return p.Count == 6 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( p[3] ) == typeof( T4 ) && NeovimUtil.GetType( p[4] ) == typeof( T5 ) && NeovimUtil.GetType( p[5] ) == typeof( T6 ) && NeovimUtil.GetType( r ) == typeof( void );
+            var isAction = NeovimUtil.ConvTypeNeovimToCs( returnType ) == typeof( void );
+            if (  isAction && param.Count == 0 ) {
+                return CreateAction( name, returnType, param, async, canFail );
+            } else {
+                if( !isAction ) {
+                    param.Add( returnType );
+                }
+                var creatorName = ( isAction ) ? "CreateAction" : "CreateFunc";
+                var methods = typeof( NeovimClient<T> ).GetMethods( BindingFlags.NonPublic | BindingFlags.Instance );
+                var baseMethod = methods.First( m => m.Name == creatorName && m.GetGenericArguments().Count() == param.Count );
+                var method = baseMethod.MakeGenericMethod( param.Select( i => NeovimUtil.ConvTypeNeovimToCs( i ) ).ToArray() );
+                return method.Invoke( this, new object[] { name, returnType, param, async, canFail } );
+            }
         }
 
         private object CreateFunc<T1>( string name, string returnType, List<string> param, bool async, bool canFail ) {
@@ -403,7 +331,7 @@ namespace NeovimClient {
     }
 
     class NeovimUtil {
-        public static Type GetType( string type ) {
+        public static Type ConvTypeNeovimToCs( string type ) {
             if ( type == "Buffer" || type == "Window" || type == "Tabpage" ) {
                 return typeof( long );
             } else if ( type.StartsWith( "ArrayOf(Integer" ) ) {
@@ -414,14 +342,14 @@ namespace NeovimClient {
                 return typeof( string[] );
             } else {
                 switch ( type ) {
-                    case "Integer": return typeof( long );
-                    case "String": return typeof( string );
-                    case "void": return typeof( void );
-                    case "Boolean": return typeof( bool );
-                    case "Object": return typeof( object );
-                    case "Array": return typeof( MessagePackObject );
+                    case "Integer"   : return typeof( long );
+                    case "String"    : return typeof( string );
+                    case "void"      : return typeof( void );
+                    case "Boolean"   : return typeof( bool );
+                    case "Object"    : return typeof( object );
+                    case "Array"     : return typeof( MessagePackObject );
                     case "Dictionary": return typeof( MessagePackObject );
-                    default: throw new NotImplementedException();
+                    default          : return typeof( MessagePackObject );
                 }
             }
         }
