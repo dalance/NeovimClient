@@ -71,6 +71,10 @@ namespace NeovimClient {
 
         public NeovimClient( T io ) {
             neovimIO = io;
+        }
+
+        public void Init() {
+            neovimIO.Init();
             CreateApi();
         }
 

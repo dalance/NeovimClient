@@ -13,6 +13,8 @@ namespace NeovimClient {
 
         // - field -----------------------------------------------------------------------
 
+        private string neovimPath;
+
         private Process      proc;
         private StreamWriter stdIn;
         private StreamReader stdOut;
@@ -29,7 +31,11 @@ namespace NeovimClient {
         // - public methods --------------------------------------------------------------
 
         public NeovimHost( string path ) {
-            InitProcess( path );
+            neovimPath = path;
+        }
+
+        public void Init() {
+            InitProcess( neovimPath );
         }
 
         public void Dispose() {

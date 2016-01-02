@@ -11,6 +11,7 @@ namespace Test {
         [ClassInitialize]
         public static void ClassInit( TestContext context ) {
             nvim = new NeovimClient<NeovimHost>( new NeovimHost( "neovim/nvim.exe" ) );
+            nvim.Init();
         }
 
         [ClassCleanup]

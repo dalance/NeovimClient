@@ -11,6 +11,8 @@ namespace NeovimClient {
 
         // - field -----------------------------------------------------------------------
 
+        private string neovimAddress;
+        private int    neovimPort;
         private TcpClient client = new TcpClient();
 
         private StreamWriter stdIn ;
@@ -27,7 +29,12 @@ namespace NeovimClient {
         // - public methods --------------------------------------------------------------
 
         public NeovimTcp( string address, int port ) {
-            InitTcp( address, port );
+            neovimAddress = address;
+            neovimPort = port;
+        }
+
+        public void Init() {
+            InitTcp( neovimAddress, neovimPort );
         }
 
         public void Dispose() {

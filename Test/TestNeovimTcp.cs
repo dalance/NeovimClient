@@ -22,6 +22,7 @@ namespace Test {
             proc.Start();
 
             nvim = new NeovimClient<NeovimTcp>( new NeovimTcp( "127.0.0.1", 20000 ) );
+            nvim.Init();
         }
 
         [ClassCleanup]

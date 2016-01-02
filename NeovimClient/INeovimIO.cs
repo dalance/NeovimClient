@@ -24,5 +24,6 @@ namespace NeovimClient {
         event NeovimNotificationEventHandler NotificationReceived;
         MessagePackObject[] Request( string name, object[] parameters, bool hasResult = true );
         Task<MessagePackObject[]> RequestAsync( string name, object[] parameters, bool hasResult = true );
+        void Init();
     }
 }
