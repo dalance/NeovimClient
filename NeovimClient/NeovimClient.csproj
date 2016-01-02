@@ -48,8 +48,10 @@
     <Compile Include="NeovimClient.cs" />
     <Compile Include="NeovimHost.cs" />
     <Compile Include="NeovimIO.cs" />
+    <Compile Include="NeovimSocket.cs" />
     <Compile Include="NeovimTcp.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="external\UnixEndPoint.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

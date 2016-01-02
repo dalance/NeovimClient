@@ -54,6 +54,7 @@
   <ItemGroup>
     <Compile Include="TestNeovimHost.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestNeovimSocket.cs" />
     <Compile Include="TestNeovimTcp.cs" />
   </ItemGroup>
   <ItemGroup>
