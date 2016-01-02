@@ -1,6 +1,7 @@
 ﻿using MsgPack;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -27,12 +28,42 @@ namespace NeovimClient {
         }
     }
 
+    public class NeovimFuncInfo {
+        private List<Type>   paramTypeCs     = new List<Type>();
+        private List<string> paramTypeNeovim = new List<string>();
+
+        public string Name { get; private set; }
+        public string Description { get; private set; }
+        public ReadOnlyCollection<Type> ParamTypeCs { get { return new ReadOnlyCollection<Type>( paramTypeCs ); } }
+        public ReadOnlyCollection<string> ParamTypeNeovim { get { return new ReadOnlyCollection<string>( paramTypeNeovim ); } }
+        public Type ReturnTypeCs { get; private set; }
+        public string ReturnTypeNeovim { get; private set; }
+        public bool IsAsync { get; private set; }
+        public bool CanFail { get; private set; }
+        public object Func { get; private set; }
+
+        public NeovimFuncInfo( string name, string dscr, List<string> paramType, string returnType, object func, bool isAsync, bool canFail ) {
+            Name = name;
+            Description = dscr;
+            ReturnTypeNeovim = returnType;
+            ReturnTypeCs = NeovimUtil.GetType( returnType );
+            IsAsync = isAsync;
+            CanFail = canFail;
+            Func = func;
+
+            foreach ( var p in paramType ) {
+                paramTypeNeovim.Add( p );
+                paramTypeCs.Add( NeovimUtil.GetType( p ) );
+            }
+        }
+    }
+
     public class NeovimClient<T> : IDisposable where T : INeovimIO {
 
         // - field -----------------------------------------------------------------------
 
         private T neovimIO;
-        private Dictionary<string, object> api = new Dictionary<string, object>();
+        private Dictionary<string, NeovimFuncInfo> api = new Dictionary<string, NeovimFuncInfo>();
 
         // - property --------------------------------------------------------------------
 
@@ -47,21 +78,34 @@ namespace NeovimClient {
             neovimIO.Dispose();
         }
 
-        public void Action                        ( string name                                           ) { ( api[name] as Action                         )(                        ); }
-        public void Action<T1                    >( string name, T1 p0                                    ) { ( api[name] as Action<T1                    > )( p0                     ); }
-        public void Action<T1, T2                >( string name, T1 p0, T2 p1                             ) { ( api[name] as Action<T1, T2                > )( p0, p1                 ); }
-        public void Action<T1, T2, T3            >( string name, T1 p0, T2 p1, T3 p2                      ) { ( api[name] as Action<T1, T2, T3            > )( p0, p1, p2             ); }
-        public void Action<T1, T2, T3, T4        >( string name, T1 p0, T2 p1, T3 p2, T4 p3               ) { ( api[name] as Action<T1, T2, T3, T4        > )( p0, p1, p2, p3         ); }
-        public void Action<T1, T2, T3, T4, T5    >( string name, T1 p0, T2 p1, T3 p2, T4 p3, T5 p4        ) { ( api[name] as Action<T1, T2, T3, T4, T5    > )( p0, p1, p2, p3, p4     ); }
-        public void Action<T1, T2, T3, T4, T5, T6>( string name, T1 p0, T2 p1, T3 p2, T4 p3, T5 p4, T6 p5 ) { ( api[name] as Action<T1, T2, T3, T4, T5, T6> )( p0, p1, p2, p3, p4, p5 ); }
+        public void Action                        ( string name                                           ) { ( api[name].Func as Action                         )(                        ); }
+        public void Action<T1                    >( string name, T1 p0                                    ) { ( api[name].Func as Action<T1                    > )( p0                     ); }
+        public void Action<T1, T2                >( string name, T1 p0, T2 p1                             ) { ( api[name].Func as Action<T1, T2                > )( p0, p1                 ); }
+        public void Action<T1, T2, T3            >( string name, T1 p0, T2 p1, T3 p2                      ) { ( api[name].Func as Action<T1, T2, T3            > )( p0, p1, p2             ); }
+        public void Action<T1, T2, T3, T4        >( string name, T1 p0, T2 p1, T3 p2, T4 p3               ) { ( api[name].Func as Action<T1, T2, T3, T4        > )( p0, p1, p2, p3         ); }
+        public void Action<T1, T2, T3, T4, T5    >( string name, T1 p0, T2 p1, T3 p2, T4 p3, T5 p4        ) { ( api[name].Func as Action<T1, T2, T3, T4, T5    > )( p0, p1, p2, p3, p4     ); }
+        public void Action<T1, T2, T3, T4, T5, T6>( string name, T1 p0, T2 p1, T3 p2, T4 p3, T5 p4, T6 p5 ) { ( api[name].Func as Action<T1, T2, T3, T4, T5, T6> )( p0, p1, p2, p3, p4, p5 ); }
 
-        public T1 Func<T1                        >( string name                                           ) { return ( api[name] as Func<T1                        > )(                        ); }
-        public T2 Func<T1, T2                    >( string name, T1 p0                                    ) { return ( api[name] as Func<T1, T2                    > )( p0                     ); }
-        public T3 Func<T1, T2, T3                >( string name, T1 p0, T2 p1                             ) { return ( api[name] as Func<T1, T2, T3                > )( p0, p1                 ); }
-        public T4 Func<T1, T2, T3, T4            >( string name, T1 p0, T2 p1, T3 p2                      ) { return ( api[name] as Func<T1, T2, T3, T4            > )( p0, p1, p2             ); }
-        public T5 Func<T1, T2, T3, T4, T5        >( string name, T1 p0, T2 p1, T3 p2, T4 p3               ) { return ( api[name] as Func<T1, T2, T3, T4, T5        > )( p0, p1, p2, p3         ); }
-        public T6 Func<T1, T2, T3, T4, T5, T6    >( string name, T1 p0, T2 p1, T3 p2, T4 p3, T5 p4        ) { return ( api[name] as Func<T1, T2, T3, T4, T5, T6    > )( p0, p1, p2, p3, p4     ); }
-        public T7 Func<T1, T2, T3, T4, T5, T6, T7>( string name, T1 p0, T2 p1, T3 p2, T4 p3, T5 p4, T6 p5 ) { return ( api[name] as Func<T1, T2, T3, T4, T5, T6, T7> )( p0, p1, p2, p3, p4, p5 ); }
+        public T1 Func<T1                        >( string name                                           ) { return ( api[name].Func as Func<T1                        > )(                        ); }
+        public T2 Func<T1, T2                    >( string name, T1 p0                                    ) { return ( api[name].Func as Func<T1, T2                    > )( p0                     ); }
+        public T3 Func<T1, T2, T3                >( string name, T1 p0, T2 p1                             ) { return ( api[name].Func as Func<T1, T2, T3                > )( p0, p1                 ); }
+        public T4 Func<T1, T2, T3, T4            >( string name, T1 p0, T2 p1, T3 p2                      ) { return ( api[name].Func as Func<T1, T2, T3, T4            > )( p0, p1, p2             ); }
+        public T5 Func<T1, T2, T3, T4, T5        >( string name, T1 p0, T2 p1, T3 p2, T4 p3               ) { return ( api[name].Func as Func<T1, T2, T3, T4, T5        > )( p0, p1, p2, p3         ); }
+        public T6 Func<T1, T2, T3, T4, T5, T6    >( string name, T1 p0, T2 p1, T3 p2, T4 p3, T5 p4        ) { return ( api[name].Func as Func<T1, T2, T3, T4, T5, T6    > )( p0, p1, p2, p3, p4     ); }
+        public T7 Func<T1, T2, T3, T4, T5, T6, T7>( string name, T1 p0, T2 p1, T3 p2, T4 p3, T5 p4, T6 p5 ) { return ( api[name].Func as Func<T1, T2, T3, T4, T5, T6, T7> )( p0, p1, p2, p3, p4, p5 ); }
+
+        public event NeovimNotificationEventHandler NotificationReceived {
+            add    { neovimIO.NotificationReceived += value; }
+            remove { neovimIO.NotificationReceived -= value; }
+        }
+
+        public ReadOnlyCollection<string> GetFuncs() {
+            return new ReadOnlyCollection<string>( api.Keys.ToList() );
+        }
+
+        public NeovimFuncInfo GetFuncInfo( string name ) {
+            return api[name];
+        }
 
         // - private methods -------------------------------------------------------------
 
@@ -72,8 +116,9 @@ namespace NeovimClient {
         private void CreateApi() {
             api.Clear();
             var funcs = GetApiInfo().AsList()[1].AsDictionary()["functions"].AsList();
+            var funcsStatic = CreateApiStatic();
 
-            foreach( var f in funcs ) {
+            foreach( var f in funcs.Concat( funcsStatic ) ) {
                 var func = f.AsDictionary();
 
                 var parameters = func["parameters"].AsList();
@@ -84,29 +129,68 @@ namespace NeovimClient {
 
                 var param = new List<string>();
 
+                var dscr0 = ( NeovimUtil.GetType( returnType ) == typeof( void ) ) ? "void Action<" : NeovimUtil.GetType( returnType ).Name + " Func<";
+                var dscr1 = "( String name, ";
                 foreach( var p in parameters ) {
                     var pType = p.AsList()[0].AsString();
                     var pName = p.AsList()[1].AsString();
                     param.Add( pType );
+                    dscr0 += NeovimUtil.GetType( pType ).Name + ", ";
+                    dscr1 += NeovimUtil.GetType( pType ).Name + " " + pName + ", ";
                 }
+                dscr0 = dscr0.Remove( dscr0.Length - 2 );
+                dscr1 = dscr1.Remove( dscr1.Length - 2 );
+                var dscr = dscr0 + ">" + dscr1 + " )";
 
                 var expr = CreateExpression( name, returnType, param, async, canFail );
-                api.Add( name, expr );
+                var neovimFunc = new NeovimFuncInfo( name, dscr, param, returnType, expr, async, canFail );
+                api.Add( name, neovimFunc );
             }
+        }
 
-            // ui_* api is not included in list by vim_get_api_list
-            var ui_attach     = CreateAction<long, long, bool>( "ui_attach"    , "void", new List<string>() { "Integer", "Integer", "Boolean" }, false, false );
-            var ui_detach     = CreateAction                  ( "ui_detach"    , "void", new List<string>(), false, false );
-            var ui_try_resize = CreateAction<long, long      >( "ui_try_resize", "void", new List<string>() { "Integer", "Integer" }, false, false );
-            api.Add( "ui_attach"    , ui_attach     );
-            api.Add( "ui_detach"    , ui_detach     );
-            api.Add( "ui_try_resize", ui_try_resize );
+        private List<MessagePackObject> CreateApiStatic() {
+            var ui_attach_dict = new Dictionary<MessagePackObject, MessagePackObject>();
+            var ui_attach_param  = new List<MessagePackObject>();
+            ui_attach_param.Add( new MessagePackObject( new List<MessagePackObject>() { "Integer", "width" } ) );
+            ui_attach_param.Add( new MessagePackObject( new List<MessagePackObject>() { "Integer", "height" } ) );
+            ui_attach_param.Add( new MessagePackObject( new List<MessagePackObject>() { "Boolean", "rgb" } ) );
+            ui_attach_dict["name"] = "ui_attach";
+            ui_attach_dict["parameters"] = new MessagePackObject( ui_attach_param );
+            ui_attach_dict["async"] = false;
+            ui_attach_dict["can_fail"] = false;
+            ui_attach_dict["return_type"] = "void";
+
+            var ui_detach_dict = new Dictionary<MessagePackObject, MessagePackObject>();
+            var ui_detach_param  = new List<MessagePackObject>();
+            ui_detach_dict["name"] = "ui_detach";
+            ui_detach_dict["parameters"] = new MessagePackObject( ui_detach_param );
+            ui_detach_dict["async"] = false;
+            ui_detach_dict["can_fail"] = false;
+            ui_detach_dict["return_type"] = "void";
+
+            var ui_try_resize_dict = new Dictionary<MessagePackObject, MessagePackObject>();
+            var ui_try_resize_param  = new List<MessagePackObject>();
+            ui_try_resize_param.Add( new MessagePackObject( new List<MessagePackObject>() { "Integer", "width" } ) );
+            ui_try_resize_param.Add( new MessagePackObject( new List<MessagePackObject>() { "Integer", "height" } ) );
+            ui_try_resize_dict["name"] = "ui_try_resize";
+            ui_try_resize_dict["parameters"] = new MessagePackObject( ui_try_resize_param );
+            ui_try_resize_dict["async"] = false;
+            ui_try_resize_dict["can_fail"] = false;
+            ui_try_resize_dict["return_type"] = "void";
+
+            var ret = new List<MessagePackObject>();
+            ret.Add( new MessagePackObject( new MessagePackObjectDictionary( ui_attach_dict ) ) );
+            ret.Add( new MessagePackObject( new MessagePackObjectDictionary( ui_detach_dict ) ) );
+            ret.Add( new MessagePackObject( new MessagePackObjectDictionary( ui_try_resize_dict ) ) );
+
+            return ret;
         }
 
         private object CreateExpression( string name, string returnType, List<string> param, bool async, bool canFail ) {
             if ( IsActionType                                        ( param, returnType ) ) { return CreateAction                                        ( name, returnType, param, async, canFail ); }
             if ( IsActionType<long                                  >( param, returnType ) ) { return CreateAction<long                                  >( name, returnType, param, async, canFail ); }
             if ( IsActionType<long, long                            >( param, returnType ) ) { return CreateAction<long, long                            >( name, returnType, param, async, canFail ); }
+            if ( IsActionType<long, long, bool                      >( param, returnType ) ) { return CreateAction<long, long, bool                      >( name, returnType, param, async, canFail ); }
             if ( IsActionType<long, long, string                    >( param, returnType ) ) { return CreateAction<long, long, string                    >( name, returnType, param, async, canFail ); }
             if ( IsActionType<long, long, string[]                  >( param, returnType ) ) { return CreateAction<long, long, string[]                  >( name, returnType, param, async, canFail ); }
             if ( IsActionType<long, long, long, bool, bool, string[]>( param, returnType ) ) { return CreateAction<long, long, long, bool, bool, string[]>( name, returnType, param, async, canFail ); }
@@ -140,59 +224,59 @@ namespace NeovimClient {
         }
 
         private bool IsFuncType<T1>( List<string> p, string r ) {
-            return p.Count == 0 && GetType( r ) == typeof( T1 );
+            return p.Count == 0 && NeovimUtil.GetType( r ) == typeof( T1 );
         }
 
         private bool IsFuncType<T1, T2>( List<string> p, string r ) {
-            return p.Count == 1 && GetType( p[0] ) == typeof( T1 ) && GetType( r ) == typeof( T2 );
+            return p.Count == 1 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( r ) == typeof( T2 );
         }
 
         private bool IsFuncType<T1, T2, T3>( List<string> p, string r ) {
-            return p.Count == 2 && GetType( p[0] ) == typeof( T1 ) && GetType( p[1] ) == typeof( T2 ) && GetType( r ) == typeof( T3 );
+            return p.Count == 2 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( r ) == typeof( T3 );
         }
 
         private bool IsFuncType<T1, T2, T3, T4>( List<string> p, string r ) {
-            return p.Count == 3 && GetType( p[0] ) == typeof( T1 ) && GetType( p[1] ) == typeof( T2 ) && GetType( p[2] ) == typeof( T3 ) && GetType( r ) == typeof( T4 );
+            return p.Count == 3 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( r ) == typeof( T4 );
         }
 
         private bool IsFuncType<T1, T2, T3, T4, T5>( List<string> p, string r ) {
-            return p.Count == 4 && GetType( p[0] ) == typeof( T1 ) && GetType( p[1] ) == typeof( T2 ) && GetType( p[2] ) == typeof( T3 ) && GetType( p[3] ) == typeof( T4 ) && GetType( r ) == typeof( T5 );
+            return p.Count == 4 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( p[3] ) == typeof( T4 ) && NeovimUtil.GetType( r ) == typeof( T5 );
         }
 
         private bool IsFuncType<T1, T2, T3, T4, T5, T6>( List<string> p, string r ) {
-            return p.Count == 5 && GetType( p[0] ) == typeof( T1 ) && GetType( p[1] ) == typeof( T2 ) && GetType( p[2] ) == typeof( T3 ) && GetType( p[3] ) == typeof( T4 ) && GetType( p[4] ) == typeof( T5 ) && GetType( r ) == typeof( T6 );
+            return p.Count == 5 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( p[3] ) == typeof( T4 ) && NeovimUtil.GetType( p[4] ) == typeof( T5 ) && NeovimUtil.GetType( r ) == typeof( T6 );
         }
 
         private bool IsFuncType<T1, T2, T3, T4, T5, T6, T7>( List<string> p, string r ) {
-            return p.Count == 6 && GetType( p[0] ) == typeof( T1 ) && GetType( p[1] ) == typeof( T2 ) && GetType( p[2] ) == typeof( T3 ) && GetType( p[3] ) == typeof( T4 ) && GetType( p[4] ) == typeof( T5 ) && GetType( p[5] ) == typeof( T6 ) && GetType( r ) == typeof( T7 );
+            return p.Count == 6 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( p[3] ) == typeof( T4 ) && NeovimUtil.GetType( p[4] ) == typeof( T5 ) && NeovimUtil.GetType( p[5] ) == typeof( T6 ) && NeovimUtil.GetType( r ) == typeof( T7 );
         }
 
         private bool IsActionType( List<string> p, string r ) {
-            return p.Count == 0 && GetType( r ) == typeof( void );
+            return p.Count == 0 && NeovimUtil.GetType( r ) == typeof( void );
         }
 
         private bool IsActionType<T1>( List<string> p, string r ) {
-            return p.Count == 1 && GetType( p[0] ) == typeof( T1 ) && GetType( r ) == typeof( void );
+            return p.Count == 1 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( r ) == typeof( void );
         }
 
         private bool IsActionType<T1, T2>( List<string> p, string r ) {
-            return p.Count == 2 && GetType( p[0] ) == typeof( T1 ) && GetType( p[1] ) == typeof( T2 ) && GetType( r ) == typeof( void );
+            return p.Count == 2 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( r ) == typeof( void );
         }
 
         private bool IsActionType<T1, T2, T3>( List<string> p, string r ) {
-            return p.Count == 3 && GetType( p[0] ) == typeof( T1 ) && GetType( p[1] ) == typeof( T2 ) && GetType( p[2] ) == typeof( T3 ) && GetType( r ) == typeof( void );
+            return p.Count == 3 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( r ) == typeof( void );
         }
 
         private bool IsActionType<T1, T2, T3, T4>( List<string> p, string r ) {
-            return p.Count == 4 && GetType( p[0] ) == typeof( T1 ) && GetType( p[1] ) == typeof( T2 ) && GetType( p[2] ) == typeof( T3 ) && GetType( p[3] ) == typeof( T4 ) && GetType( r ) == typeof( void );
+            return p.Count == 4 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( p[3] ) == typeof( T4 ) && NeovimUtil.GetType( r ) == typeof( void );
         }
 
         private bool IsActionType<T1, T2, T3, T4, T5>( List<string> p, string r ) {
-            return p.Count == 5 && GetType( p[0] ) == typeof( T1 ) && GetType( p[1] ) == typeof( T2 ) && GetType( p[2] ) == typeof( T3 ) && GetType( p[3] ) == typeof( T4 ) && GetType( p[4] ) == typeof( T5 ) && GetType( r ) == typeof( void );
+            return p.Count == 5 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( p[3] ) == typeof( T4 ) && NeovimUtil.GetType( p[4] ) == typeof( T5 ) && NeovimUtil.GetType( r ) == typeof( void );
         }
 
         private bool IsActionType<T1, T2, T3, T4, T5, T6>( List<string> p, string r ) {
-            return p.Count == 6 && GetType( p[0] ) == typeof( T1 ) && GetType( p[1] ) == typeof( T2 ) && GetType( p[2] ) == typeof( T3 ) && GetType( p[3] ) == typeof( T4 ) && GetType( p[4] ) == typeof( T5 ) && GetType( p[5] ) == typeof( T6 ) && GetType( r ) == typeof( void );
+            return p.Count == 6 && NeovimUtil.GetType( p[0] ) == typeof( T1 ) && NeovimUtil.GetType( p[1] ) == typeof( T2 ) && NeovimUtil.GetType( p[2] ) == typeof( T3 ) && NeovimUtil.GetType( p[3] ) == typeof( T4 ) && NeovimUtil.GetType( p[4] ) == typeof( T5 ) && NeovimUtil.GetType( p[5] ) == typeof( T6 ) && NeovimUtil.GetType( r ) == typeof( void );
         }
 
         private object CreateFunc<T1>( string name, string returnType, List<string> param, bool async, bool canFail ) {
@@ -312,7 +396,10 @@ namespace NeovimClient {
             return func.Compile();
         }
 
-        private Type GetType( string type ) {
+    }
+
+    class NeovimUtil {
+        public static Type GetType( string type ) {
             if ( type == "Buffer" || type == "Window" || type == "Tabpage" ) {
                 return typeof( long );
             } else if ( type.StartsWith( "ArrayOf(Integer" ) ) {
@@ -322,18 +409,18 @@ namespace NeovimClient {
             } else if ( type.StartsWith( "ArrayOf(String" ) ) {
                 return typeof( string[] );
             } else {
-                switch( type ) {
-                    case "Integer"   : return typeof( long     );
-                    case "String"    : return typeof( string   );
-                    case "void"      : return typeof( void     );
-                    case "Boolean"   : return typeof( bool     );
-                    case "Object"    : return typeof( object   );
-                    case "Array"     : return typeof( MessagePackObject );
+                switch ( type ) {
+                    case "Integer": return typeof( long );
+                    case "String": return typeof( string );
+                    case "void": return typeof( void );
+                    case "Boolean": return typeof( bool );
+                    case "Object": return typeof( object );
+                    case "Array": return typeof( MessagePackObject );
                     case "Dictionary": return typeof( MessagePackObject );
-                    default          : throw new NotImplementedException();
+                    default: throw new NotImplementedException();
                 }
             }
         }
-
     }
+
 }
