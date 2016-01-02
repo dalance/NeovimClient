@@ -47,6 +47,7 @@
     <Compile Include="INeovimIO.cs" />
     <Compile Include="NeovimClient.cs" />
     <Compile Include="NeovimHost.cs" />
+    <Compile Include="NeovimIO.cs" />
     <Compile Include="NeovimTcp.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
